@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estudio de No Conformidades & Ishikawa</title>
+    <script src="https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.30/dist/web-llm.js"></script>
+    <style>
+    .no-screen { display: none; }
+        .access-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.9); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 9999; }
+        .access-box { background: white; border-radius: 20px; width: 100%; max-width: 420px; padding: 28px; box-shadow: 0 24px 60px rgba(15, 23, 42, 0.35); }
+        .access-box h2 { margin-top: 0; color: #0f172a; }
+        .access-box p { color: #475569; margin-bottom: 16px; }
+        .access-box .print-btn { width: 100%; }
+        .access-hidden { display: none !important; }
+        .access-link { word-break: break-all; color: #0f172a; }
+        .access-inline { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
+        .access-banner { background: #ecfdf5; border: 1px solid #bbf7d0; color: #166534; border-radius: 14px; padding: 18px 20px; margin-top: 16px; }
+        .access-banner strong { display: block; margin-top: 8px; }
+        body { font-family: Inter, system-ui, sans-serif; background-color: #f3f4f6; color: #111827; margin: 0; padding: 24px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        header { border-bottom: 2px solid #e5e7eb; padding-bottom: 16px; margin-bottom: 24px; }
+        h1 { color: #1d4ed8; margin: 0 0 8px 0; font-size: 2rem; }
+        h2 { margin-top: 0; color: #0f172a; font-size: 1.25rem; }
+        p { margin: 0; color: #475569; }
+        .grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
+        @media (min-width: 1024px) { .grid { grid-template-columns: 1fr 2fr; } }
+        .card { background: white; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08); }
+        .form-group { margin-bottom: 18px; }
+        label { display: block; font-size: 0.95rem; font-weight: 700; color: #334155; margin-bottom: 8px; }
+        input[type="text"], textarea { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 10px; box-sizing: border-box; font-size: 0.95rem; color: #0f172a; background: #f8fafc; }
+        input[type="text"]:focus, textarea:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12); }
+        textarea { resize: vertical; min-height: 110px; }
+        .m-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+        @media (min-width: 640px) { .m-grid { grid-template-columns: 1fr 1fr; } }
+        .m-box { background: #f8fafc; padding: 14px; border-radius: 10px; border: 1px solid #e2e8f0; }
+        .flex-input { display: flex; gap: 10px; }
+        .flex-input input { flex: 1; }
+        .flex-input button { flex-shrink: 0; background: #2563eb; color: white; border: none; padding: 0 16px; border-radius: 10px; cursor: pointer; font-weight: 700; }
+        .flex-input button:hover { background: #1d4ed8; }
+
+        .print-actions { margin-top: 12px; }
+        .print-btn { background: #2563eb; color: white; border: none; padding: 10px 16px; border-radius: 999px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.22); }
+        .print-btn:hover { background: #1d4ed8; }
+        ul { padding-left: 20px; margin: 10px 0 0 0; font-size: 0.92rem; color: #475569; }
+        @media print {
+            @page { size: A4 landscape; margin: 4mm; }
+            html, body { height: 100%; }
+            body { background: white; padding: 0; margin: 0; color: #000; font-size: 9px; line-height: 1.05; }
+            .container { max-width: 100% !important; width: 100%; padding: 0 !important; margin: 0; }
+            .no-print, .print-actions { display: none !important; }
+            .grid { display: block; }
+            .card { display: none !important; }
+            header { border: 0; padding: 0 0 4px 0; margin: 0 0 4px 0; }
+            .ishikawa-container { margin: 0; padding: 0; border: 0; background: transparent; overflow: visible; }
+            .diagram-wrapper { min-width: 0; width: 100%; padding: 0; margin: 0; border: 0; background: white; display: flex; flex-direction: column; }
+            .fish-row { gap: 4px; margin: 0; }
+            .category-node { min-height: 46px; padding: 5px; margin: 0; }
+            .cat-title { font-size: 0.72rem; margin-bottom: 4px; padding-bottom: 3px; }
+            .fish-head { padding: 8px; min-width: 120px; max-width: 180px; font-size: 8.5px; box-shadow: none; }
+            .head-tag { font-size: 0.62rem; margin-bottom: 3px; }
+            .causa-tag { font-size: 8px; padding: 2px 5px; margin: 2px 0; border: 0; box-shadow: none; }
+            .main-line { height: 1.5px; }
+            .spine-center { margin: 8px 0; }
+            h1 { font-size: 14px; margin: 0; }
+            h2 { font-size: 11px; margin: 0 0 2px 0; }
+            label, input, textarea { font-size: 9px; }
+            textarea { min-height: 40px; }
+            .ishikawa-container, .diagram-wrapper, header { page-break-inside: avoid; page-break-after: avoid; }
+            * { page-break-inside: avoid; }
+            .no-screen { display: block !important; }
+            input, textarea, button { border: 0 !important; box-shadow: none !important; background: transparent !important; }
+        }
+        ul li { margin-bottom: 6px; }
+        .ishikawa-container { overflow-x: auto; margin-top: 24px; background: white; padding: 22px; border-radius: 12px; border: 1px solid #e5e7eb; }
+        .diagram-wrapper { min-width: 900px; display: flex; flex-direction: column; background: #f8fafc; padding: 24px; border-radius: 12px; border: 1px dashed #cbd5e1; position: relative; }
+        .fish-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; text-align: center; }
+        .category-node { padding: 14px; border-radius: 12px; min-height: 140px; text-align: left; }
+        .cat-title { font-weight: 700; font-size: 0.95rem; display: block; margin-bottom: 10px; text-align: center; padding-bottom: 6px; border-bottom: 1px solid rgba(15, 23, 42, 0.08); }
+        .top-node { background-color: #eff6ff; border: 1px solid #bfdbfe; }
+        .top-node .cat-title { color: #1d4ed8; }
+        .bottom-node { background-color: #ecfdf5; border: 1px solid #bbf7d0; }
+        .bottom-node .cat-title { color: #166534; }
+        .spine-center { display: flex; margin: 28px 0; position: relative; width: 100%; align-items: center; }
+        .main-line { height: 4px; background: #334155; flex-grow: 1; border-radius: 4px; }
+        .fish-head { background: #dc2626; color: white; font-weight: 700; padding: 20px; border-radius: 0 14px 14px 0; text-align: center; min-width: 220px; max-width: 280px; box-shadow: 0 8px 16px rgba(15, 23, 42, 0.12); position: relative; }
+        .fish-head::before { content: ''; position: absolute; left: -20px; top: 0; border-width: 30px 20px 30px 0; border-style: solid; border-color: transparent #dc2626 transparent transparent; }
+        .head-tag { font-size: 0.78rem; opacity: 0.85; display: block; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em; }
+        .causa-tag { background: white; padding: 8px 12px; margin: 6px 0; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 0.88rem; box-shadow: 0 2px 4px rgba(15, 23, 42, 0.06); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .causa-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+        .causa-item .delete-btn { width: 24px; height: 24px; border: none; border-radius: 999px; background: #ef4444; color: white; font-size: 0.95rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+        .causa-item .delete-btn:hover { background: #dc2626; }
+        .image-preview { margin-top: 12px; border: 1px solid #cbd5e1; border-radius: 12px; padding: 12px; background: #f8fafc; display: none; }
+        .image-preview img { max-width: 100%; height: auto; border-radius: 10px; display: block; margin-bottom: 8px; }
+        .image-preview .image-name { font-size: 0.92rem; color: #334155; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="access-overlay" class="access-overlay">
+            <div class="access-box">
+                <h2>Acceso con clave compartida</h2>
+                <p>Ingresa la clave de acceso o usa el link compartido para entrar sin necesidad de cuenta.</p>
+                <div class="form-group">
+                    <label for="access-key-input">Clave de ingreso</label>
+                    <input type="text" id="access-key-input" placeholder="Ej: GESTION-2026">
+                </div>
+                <button type="button" class="print-btn" id="access-submit-btn">Ingresar</button>
+                <div id="access-error" style="color:#b91c1c;margin-top:10px;display:none;">Clave incorrecta. Intenta de nuevo.</div>
+                <div class="access-inline" style="margin-top:18px;">
+                    <span style="font-size:0.95rem;color:#334155;">Acceso privado:</span>
+                    <strong id="access-key-display" style="font-size:0.95rem;color:#0f172a;">Tu clave personal</strong>
+                </div>
+                <div class="access-inline" style="margin-top:10px;">
+                    <span style="font-size:0.95rem;color:#334155;">Link de acceso:</span>
+                    <span id="access-link-display" class="access-link">...</span>
+                </div>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
+                    <button type="button" class="print-btn" id="copy-access-link-btn" style="background:#10b981;">Copiar enlace compartido</button>
+                    <button type="button" class="print-btn" id="change-access-key-btn" style="background:#f59e0b;">Cambiar clave</button>
+                </div>
+            </div>
+        </div>
+        <header>
+            <h1>⚙️ Gestión de No Conformidades</h1>
+            <p>Analiza causas raíz mediante el diagrama de Ishikawa de forma simple.</p>
+            <div id="access-info-banner" class="access-banner no-print access-hidden">
+                <div><strong>Acceso directo listo:</strong></div>
+                <div class="access-link" id="share-link-text"></div>
+                <div class="access-inline">
+                    <span>Clave de ingreso:</span>
+                    <strong id="share-key-text"></strong>
+                </div>
+                <button type="button" class="print-btn" id="copy-share-link-btn" style="background:#10b981; margin-top:12px;">Copiar enlace de acceso</button>
+            </div>
+            <div id="print-summary" class="no-screen" style="font-size:11px;margin-top:6px;padding:6px 0;border-top:1px dashed rgba(0,0,0,0.06);">
+                <strong id="print-titulo">&nbsp;</strong>
+                <div id="print-efecto" style="font-size:10px;margin-top:4px;color:#334155">&nbsp;</div>
+            </div>
+            <div class="print-actions no-print">
+                <button type="button" class="print-btn" onclick="window.print()">📄 Exportar a PDF / Imprimir</button>
+            </div>
+        </header>
+        <div class="grid">
+            <div class="card">
+                <h2>1. Registro del Problema</h2>
+                <div class="form-group">
+                    <label for="nc-titulo">Título de la No Conformidad</label>
+                    <input type="text" id="nc-titulo" placeholder="Ej: Desviación en peso de lote X">
+                </div>
+                <div class="form-group">
+                    <label for="nc-efecto">Descripción del Efecto / Problema</label>
+                    <textarea id="nc-efecto" rows="4" placeholder="Describe el efecto observado aquí..." oninput="actualizarEfecto()"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="nc-imagen">Evidencia visual (imágenes)</label>
+                    <input type="file" id="nc-imagen" accept="image/*" multiple>
+                    <div id="nc-imagen-preview" class="image-preview" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px;">
+                    </div>
+                    <div id="nc-imagen-limit-msg" style="font-size:0.85rem;color:#0f172a; display:none; margin-top: 8px;"></div>
+                    <small style="color: #64748b; display: block; margin-top: 8px;">Selecciona varias imágenes a la vez. Se mostrarán hasta 5 imágenes.</small>
+                </div>
+                <div class="form-group">
+                    <label for="nc-imagen-desc">Descripción visual</label>
+                    <textarea id="nc-imagen-desc" rows="3" placeholder="Describe lo que muestra la imagen y qué observas relevantes para la causa."></textarea>
+                </div>
+            </div>
+            <div class="card no-print">
+                <h2>2. Análisis de Causa Raíz (Las 6M)</h2>
+                <div class="m-grid">
+                    <div class="m-box">
+                        <label for="input-mano">🧑‍🔧 Mano de Obra</label>
+                        <div class="flex-input"><input type="text" id="input-mano" placeholder="Agregar causa"><button type="button" data-category="mano" class="add-cause-btn">+</button></div>
+                        <ul id="lista-mano"></ul>
+                    </div>
+                    <div class="m-box">
+                        <label for="input-maquina">💻 Maquinaria / Equipos</label>
+                        <div class="flex-input"><input type="text" id="input-maquina" placeholder="Agregar causa"><button type="button" data-category="maquina" class="add-cause-btn">+</button></div>
+                        <ul id="lista-maquina"></ul>
+                    </div>
+                    <div class="m-box">
+                        <label for="input-material">📦 Materiales</label>
+                        <div class="flex-input"><input type="text" id="input-material" placeholder="Agregar causa"><button type="button" data-category="material" class="add-cause-btn">+</button></div>
+                        <ul id="lista-material"></ul>
+                    </div>
+                    <div class="m-box">
+                        <label for="input-metodo">📜 Métodos</label>
+                        <div class="flex-input"><input type="text" id="input-metodo" placeholder="Agregar causa"><button type="button" data-category="metodo" class="add-cause-btn">+</button></div>
+                        <ul id="lista-metodo"></ul>
+                    </div>
+                    <div class="m-box">
+                        <label for="input-medicion">📏 Medición</label>
+                        <div class="flex-input"><input type="text" id="input-medicion" placeholder="Agregar causa"><button type="button" data-category="medicion" class="add-cause-btn">+</button></div>
+                        <ul id="lista-medicion"></ul>
+                    </div>
+                    <div class="m-box">
+                        <label for="input-medio">🌍 Medio Ambiente</label>
+                        <div class="flex-input"><input type="text" id="input-medio" placeholder="Agregar causa"><button type="button" data-category="medio" class="add-cause-btn">+</button></div>
+                        <ul id="lista-medio"></ul>
+                    </div>
+                </div>
+                <div class="print-actions" style="margin-top: 16px; display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button type="button" class="print-btn" style="background: #059669;" id="btn-agregar-todas">Agregar todas las causas</button>
+                    <button type="button" class="print-btn" style="background: #2563eb;" id="btn-limpiar-campos">Limpiar campos</button>
+                </div>
+            </div>
+        </div>
+        <div class="ishikawa-container">
+            <h2>3. Diagrama de Ishikawa Generado</h2>
+            <div class="diagram-wrapper">
+                <div class="fish-row">
+                    <div class="category-node top-node">
+                        <span class="cat-title">MANO DE OBRA</span>
+                        <div id="ishikawa-mano"></div>
+                    </div>
+                    <div class="category-node top-node">
+                        <span class="cat-title">MAQUINARIA</span>
+                        <div id="ishikawa-maquina"></div>
+                    </div>
+                    <div class="category-node top-node">
+                        <span class="cat-title">MATERIALES</span>
+                        <div id="ishikawa-material"></div>
+                    </div>
+                </div>
+                <div class="spine-center">
+                    <div class="main-line"></div>
+                    <div class="fish-head">
+                        <span class="head-tag">EFECTO / PROBLEMA</span>
+                        <span id="ishikawa-efecto">Sin descripción</span>
+                    </div>
+                </div>
+                <div class="fish-row">
+                    <div class="category-node bottom-node">
+                        <span class="cat-title">MÉTODOS</span>
+                        <div id="ishikawa-metodo"></div>
+                    </div>
+                    <div class="category-node bottom-node">
+                        <span class="cat-title">MEDICIÓN</span>
+                        <div id="ishikawa-medicion"></div>
+                    </div>
+                    <div class="category-node bottom-node">
+                        <span class="cat-title">MEDIO AMBIENTE</span>
+                        <div id="ishikawa-medio"></div>
+                    </div>
+                </div>
+            </div>
+            <div style="margin-top: 20px; text-align: center; padding: 20px; background: #f8fafc; border-radius: 12px;">
+                <button type="button" id="btn-analizar-ia" class="print-btn" style="background: #7c3aed; box-shadow: 0 4px 10px rgba(124, 58, 237, 0.22);" onclick="analizarCausaIA()">🧠 Analizar Causa</button>
+                <div id="resultado-ia" style="margin-top: 12px; font-size: 0.95rem; color: #334155; display: none;"></div>
+            </div>
+
+            <div id="plan-accion-container" style="margin-top: 24px; background: white; padding: 22px; border-radius: 12px; border: 1px solid #e5e7eb; display: none;">
+                <h2>4. Plan de Acción Recomendado</h2>
+                <div id="plan-accion-contenido" style="margin-top: 16px;"></div>
+            </div>
+
+        </div>
+    </div>
+    <script>
+        const ACCESS_DEFAULT = 'GESTION-2026';
+        const ACCESS_QUERY_PARAM = 'access';
+        const ACCESS_STORAGE_KEY = 'gestion_nc_access_granted';
+        const ACCESS_CURRENT_KEY_STORAGE = 'gestion_nc_current_key';
+
+        function getAccessKey() {
+            return localStorage.getItem(ACCESS_CURRENT_KEY_STORAGE) || ACCESS_DEFAULT;
+        }
+
+        function setAccessKey(nuevaClave) {
+            localStorage.setItem(ACCESS_CURRENT_KEY_STORAGE, nuevaClave);
+            localStorage.removeItem(ACCESS_STORAGE_KEY);
+        }
+
+        const analisis = {
+            mano: [],
+            maquina: [],
+            material: [],
+            metodo: [],
+            medicion: [],
+            medio: []
+        };
+
+        let motorIA = null;
+        let estadoIA = { cargando: false, listo: false, error: false };
+
+        function obtenerParametroAcceso() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get(ACCESS_QUERY_PARAM) || '';
+        }
+
+        function generarLinkAcceso() {
+            return window.location.origin + window.location.pathname + '?' + ACCESS_QUERY_PARAM + '=' + encodeURIComponent(getAccessKey());
+        }
+
+        function permitirAcceso() {
+            localStorage.setItem(ACCESS_STORAGE_KEY, getAccessKey());
+            document.getElementById('access-overlay').classList.add('access-hidden');
+            document.getElementById('access-error').style.display = 'none';
+            actualizarBannerAcceso();
+        }
+
+        function mostrarAcceso() {
+            document.getElementById('access-overlay').classList.remove('access-hidden');
+        }
+
+        function verificarAcceso() {
+            const accesoGuardado = localStorage.getItem(ACCESS_STORAGE_KEY) === getAccessKey();
+            const accesoUrl = obtenerParametroAcceso();
+            if (accesoGuardado || accesoUrl === getAccessKey()) {
+                permitirAcceso();
+            } else {
+                mostrarAcceso();
+            }
+        }
+
+        function actualizarBannerAcceso() {
+            const banner = document.getElementById('access-info-banner');
+            const linkText = document.getElementById('share-link-text');
+            const keyText = document.getElementById('share-key-text');
+            if (!banner || !linkText || !keyText) return;
+            linkText.textContent = generarLinkAcceso();
+            keyText.textContent = 'Clave privada configurada';
+            banner.classList.remove('access-hidden');
+        }
+
+        function actualizarAccesoOverlay() {
+            const linkDisplay = document.getElementById('access-link-display');
+            const keyDisplay = document.getElementById('access-key-display');
+            if (linkDisplay) linkDisplay.textContent = generarLinkAcceso();
+            if (keyDisplay) keyDisplay.textContent = 'Oculta';
+        }
+
+        function copiarTextoAlPortapapeles(text) {
+            return navigator.clipboard?.writeText(text);
+        }
+
+        function inicializarAcceso() {
+            actualizarAccesoOverlay();
+            verificarAcceso();
+        }
+
+        function manejarEnvioAcceso() {
+            const input = document.getElementById('access-key-input');
+            const error = document.getElementById('access-error');
+            if (!input || !error) return;
+            if (input.value.trim() === getAccessKey()) {
+                permitirAcceso();
+            } else {
+                error.style.display = 'block';
+            }
+        }
+
+        function manejarCopiarEnlace() {
+            copiarTextoAlPortapapeles(generarLinkAcceso()).then(function() {
+                alert('Enlace de acceso copiado al portapapeles.');
+            }).catch(function() {
+                alert('No se pudo copiar automáticamente. Copia el enlace manualmente: ' + generarLinkAcceso());
+            });
+        }
+
+
+        function actualizarEfecto() {
+            const texto = document.getElementById('nc-efecto').value.trim();
+            document.getElementById('ishikawa-efecto').innerText = texto !== '' ? texto : 'Sin descripción';
+        }
+
+        function agregarCausa(categoria, valorOverride = null) {
+            const input = document.getElementById('input-' + categoria);
+            const valor = (valorOverride ?? input.value).trim();
+            if (valor === '') return;
+
+            analisis[categoria].push(valor);
+            if (input) input.value = '';
+            renderizarListas(categoria);
+        }
+
+        function eliminarCausa(categoria, indice) {
+            analisis[categoria].splice(indice, 1);
+            renderizarListas(categoria);
+        }
+
+        function renderizarListas(categoria) {
+            const listaUI = document.getElementById('lista-' + categoria);
+            const diagramaUI = document.getElementById('ishikawa-' + categoria);
+            listaUI.innerHTML = '';
+            diagramaUI.innerHTML = '';
+
+            analisis[categoria].forEach(function(causa, indice) {
+                const li = document.createElement('li');
+                li.className = 'causa-item';
+
+                const spanCausa = document.createElement('span');
+                spanCausa.textContent = causa;
+
+                const botonEliminar = document.createElement('button');
+                botonEliminar.type = 'button';
+                botonEliminar.className = 'delete-btn';
+                botonEliminar.textContent = '×';
+                botonEliminar.setAttribute('aria-label', 'Eliminar causa');
+                botonEliminar.addEventListener('click', function() {
+                    eliminarCausa(categoria, indice);
+                });
+
+                li.appendChild(spanCausa);
+                li.appendChild(botonEliminar);
+                listaUI.appendChild(li);
+
+                const divCausa = document.createElement('div');
+                divCausa.className = 'causa-tag';
+                divCausa.textContent = causa;
+                diagramaUI.appendChild(divCausa);
+            });
+        }
+
+        function actualizarPrintSummary() {
+            const titulo = document.getElementById('nc-titulo').value || '';
+            const efecto = document.getElementById('nc-efecto').value || '';
+            document.getElementById('print-titulo').textContent = titulo || 'Sin título';
+            document.getElementById('print-efecto').textContent = efecto || 'Sin descripción';
+        }
+
+        function inicializarEventos() {
+            document.addEventListener('click', function(event) {
+                const button = event.target.closest('button');
+                if (!button) return;
+
+                if (button.classList.contains('add-cause-btn')) {
+                    const categoria = button.dataset.category;
+                    if (categoria) agregarCausa(categoria);
+                    return;
+                }
+
+                if (button.id === 'btn-agregar-todas') {
+                    agregarTodasCausas();
+                    return;
+                }
+
+                if (button.id === 'btn-limpiar-campos') {
+                    vaciarInputs();
+                    return;
+                }
+            });
+
+            const tituloInput = document.getElementById('nc-titulo');
+            const efectoInput = document.getElementById('nc-efecto');
+            const imagenInput = document.getElementById('nc-imagen');
+            const accessSubmit = document.getElementById('access-submit-btn');
+            const copyAccessBtn = document.getElementById('copy-access-link-btn');
+            const copyShareBtn = document.getElementById('copy-share-link-btn');
+            const accessInput = document.getElementById('access-key-input');
+
+            if (tituloInput) {
+                tituloInput.addEventListener('input', actualizarPrintSummary);
+            }
+            if (efectoInput) {
+                efectoInput.addEventListener('input', function() {
+                    actualizarEfecto();
+                    actualizarPrintSummary();
+                });
+            }
+            if (imagenInput) {
+                imagenInput.addEventListener('change', function(event) {
+                    const archivos = event.target.files;
+                    const preview = document.getElementById('nc-imagen-preview');
+                    const limiteMsg = document.getElementById('nc-imagen-limit-msg');
+                    preview.innerHTML = '';
+
+                    if (!archivos || archivos.length === 0) {
+                        preview.style.display = 'none';
+                        if (limiteMsg) limiteMsg.style.display = 'none';
+                        return;
+                    }
+
+                    const maxImagenes = 5;
+                    const cantidadAMostrar = Math.min(archivos.length, maxImagenes);
+                    preview.style.display = 'grid';
+
+                    if (limiteMsg) {
+                        if (archivos.length > maxImagenes) {
+                            limiteMsg.textContent = 'Se mostrarán las primeras ' + maxImagenes + ' imágenes seleccionadas.';
+                            limiteMsg.style.display = 'block';
+                        } else {
+                            limiteMsg.style.display = 'none';
+                        }
+                    }
+
+                    for (let i = 0; i < cantidadAMostrar; i++) {
+                        const archivo = archivos[i];
+                        const reader = new FileReader();
+
+                        reader.onload = function(e) {
+                            const contenedor = document.createElement('div');
+                            contenedor.style.position = 'relative';
+                            contenedor.style.borderRadius = '8px';
+                            contenedor.style.overflow = 'hidden';
+                            contenedor.style.border = '1px solid #cbd5e1';
+                            contenedor.style.backgroundColor = '#f8fafc';
+
+                            const img = document.createElement('img');
+                            img.src = e.target.result;
+                            img.alt = archivo.name;
+                            img.style.width = '100%';
+                            img.style.height = '120px';
+                            img.style.objectFit = 'cover';
+                            img.style.display = 'block';
+
+                            const nombre = document.createElement('div');
+                            nombre.textContent = archivo.name.substring(0, 20);
+                            nombre.style.fontSize = '0.75rem';
+                            nombre.style.padding = '6px';
+                            nombre.style.backgroundColor = '#f1f5f9';
+                            nombre.style.borderTop = '1px solid #e2e8f0';
+                            nombre.style.overflow = 'hidden';
+                            nombre.style.textOverflow = 'ellipsis';
+                            nombre.style.whiteSpace = 'nowrap';
+                            nombre.style.color = '#334155';
+
+                            contenedor.appendChild(img);
+                            contenedor.appendChild(nombre);
+                            preview.appendChild(contenedor);
+                        };
+                        reader.readAsDataURL(archivo);
+                    }
+                });
+            }
+            if (accessSubmit) {
+                accessSubmit.addEventListener('click', manejarEnvioAcceso);
+            }
+            if (copyAccessBtn) {
+                copyAccessBtn.addEventListener('click', manejarCopiarEnlace);
+            }
+            if (copyShareBtn) {
+                copyShareBtn.addEventListener('click', manejarCopiarEnlace);
+            }
+            const changeKeyBtn = document.getElementById('change-access-key-btn');
+            if (changeKeyBtn) {
+                changeKeyBtn.addEventListener('click', cambiarClave);
+            }
+            if (accessInput) {
+                accessInput.addEventListener('keydown', function(event) {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        manejarEnvioAcceso();
+                    }
+                });
+            }
+        }
+
+        function cambiarClave() {
+            const actual = prompt('Ingresa tu clave actual para cambiarla:');
+            if (actual === null) return;
+            if (actual.trim() !== getAccessKey()) {
+                alert('Clave actual incorrecta.');
+                return;
+            }
+            const nueva = prompt('Ingresa la nueva clave de acceso (mínimo 4 caracteres):');
+            if (nueva === null) return;
+            const claveNueva = nueva.trim();
+            if (claveNueva.length < 4) {
+                alert('La nueva clave debe tener al menos 4 caracteres.');
+                return;
+            }
+            setAccessKey(claveNueva);
+            actualizarAccesoOverlay();
+            if (document.getElementById('access-error')) {
+                document.getElementById('access-error').style.display = 'none';
+            }
+            alert('Clave actualizada correctamente. Usa la nueva clave para ingresar.');
+        }
+
+        function agregarTodasCausas() {
+            const categorias = ['mano', 'maquina', 'material', 'metodo', 'medicion', 'medio'];
+            categorias.forEach(function(categoria) {
+                const input = document.getElementById('input-' + categoria);
+                if (!input) return;
+                const valor = input.value.trim();
+                if (valor !== '') {
+                    agregarCausa(categoria, valor);
+                }
+            });
+        }
+
+        function vaciarInputs() {
+            ['mano', 'maquina', 'material', 'metodo', 'medicion', 'medio'].forEach(function(categoria) {
+                const input = document.getElementById('input-' + categoria);
+                if (input) input.value = '';
+            });
+        }
+
+        async function inicializarModeloIA() {
+            if (motorIA || estadoIA.cargando) return;
+            estadoIA.cargando = true;
+            const boton = document.getElementById('btn-analizar-ia');
+            if (boton) boton.textContent = '🧠 Cargando IA…';
+
+            try {
+                // Intentar conectar a Ollama local
+                const response = await fetch('http://localhost:11434/api/tags', { method: 'GET' });
+                if (response.ok) {
+                    estadoIA.listo = true;
+                    estadoIA.error = false;
+                    motorIA = { tipo: 'ollama' };
+                    if (boton) boton.textContent = '🧠 Analizar Causa';
+                    console.log('✓ Ollama detectado');
+                } else {
+                    throw new Error('Ollama no responde');
+                }
+            } catch (error) {
+                console.warn('Ollama no disponible, usando modo simulado:', error);
+                estadoIA.listo = true;
+                estadoIA.error = false;
+                motorIA = { tipo: 'simulado' };
+                if (boton) boton.textContent = '🧠 Analizar Causa (Simulado)';
+            }
+        }
+
+        async function analizarCausaIA() {
+            const efecto = document.getElementById('nc-efecto').value.trim();
+            const titulo = document.getElementById('nc-titulo').value.trim();
+            const imagenDesc = document.getElementById('nc-imagen-desc').value.trim();
+            const imagenInput = document.getElementById('nc-imagen');
+            const boton = document.getElementById('btn-analizar-ia');
+            const resultadoDiv = document.getElementById('resultado-ia');
+            const planContainer = document.getElementById('plan-accion-container');
+
+            if (!efecto) {
+                alert('Escribe primero la descripción del efecto o problema.');
+                return;
+            }
+
+            const causasTotales = Object.values(analisis).reduce(function(a, b) { return a.concat(b); }, []);
+            if (causasTotales.length === 0) {
+                alert('Agrega al menos una causa antes de analizar.');
+                return;
+            }
+
+            if (!motorIA) {
+                await inicializarModeloIA();
+            }
+
+            if (!motorIA || estadoIA.error) {
+                alert('La IA aún no está disponible. Intenta nuevamente en unos segundos.');
+                return;
+            }
+
+            if (boton) {
+                boton.disabled = true;
+                boton.textContent = '🧠 Analizando…';
+            }
+            if (resultadoDiv) resultadoDiv.style.display = 'none';
+            if (planContainer) planContainer.style.display = 'none';
+
+            try {
+                // Leer múltiples imágenes si existen
+                let tieneImagenes = false;
+                let cantidadImagenes = 0;
+                if (imagenInput && imagenInput.files && imagenInput.files.length > 0) {
+                    tieneImagenes = true;
+                    cantidadImagenes = imagenInput.files.length;
+                }
+
+                const causasFormatadas = Object.entries(analisis)
+                    .filter(function(entry) { return entry[1].length > 0; })
+                    .map(function(entry) {
+                        const cat = entry[0];
+                        const causas = entry[1];
+                        const nombres = { mano: 'Mano de Obra', maquina: 'Maquinaria', material: 'Materiales', metodo: 'Métodos', medicion: 'Medición', medio: 'Medio Ambiente' };
+                        return nombres[cat] + ': ' + causas.join(', ');
+                    })
+                    .join('\n');
+
+                let contextoImagen = '';
+                if (tieneImagenes && imagenDesc) {
+                    contextoImagen = '\n\nEVIDENCIA VISUAL (' + cantidadImagenes + ' imagen(es)):\nDescripción de las imágenes: ' + imagenDesc + '\nLas imágenes muestran evidencia directa del problema identificado desde múltiples ángulos o momentos.';
+                } else if (tieneImagenes) {
+                    contextoImagen = '\n\nEVIDENCIA VISUAL (' + cantidadImagenes + ' imagen(es)):\nSe han proporcionado ' + cantidadImagenes + ' imagen(es) que muestra(n) la evidencia del problema.';
+                }
+
+                const promptCausa = 'Eres un experto en calidad y mejora de procesos. Analiza CUIDADOSAMENTE el problema, las causas identificadas en cada categoría (6M de Ishikawa) Y la evidencia visual proporcionada (si la hay). La imagen es CRÍTICA para el análisis. Determina la CAUSA RAÍZ PRINCIPAL más probable considerando TODOS los elementos. Responde SOLO con la causa raíz (una línea, máximo 100 caracteres, sin explicación).';
+                
+                const userMessageCausa = 'PROBLEMA:\nTítulo: ' + titulo + '\nEfecto/Descripción: ' + efecto + '\n\nCausas identificadas por categoría:\n' + causasFormatadas + contextoImagen + '\n\nINSTRUCCIÓN: Analiza TODO incluyendo la imagen y proporciona la causa raíz principal.';
+
+                let causaRaiz = '';
+
+                // Generar causa raíz
+                if (motorIA.tipo === 'ollama') {
+                    const res = await fetch('http://localhost:11434/api/generate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            model: 'tinyllama',
+                            prompt: userMessageCausa,
+                            stream: false,
+                            temperature: 0.3
+                        })
+                    });
+
+                    if (!res.ok) throw new Error('Ollama error: ' + res.statusText);
+                    const data = await res.json();
+                    causaRaiz = (data.response || '').trim();
+                } else {
+                    // Modo simulado mejorado que considera la imagen
+                    const todasCausas = Object.values(analisis).flat().join(' ').toLowerCase();
+                    const descCompleta = (efecto + ' ' + imagenDesc).toLowerCase();
+                    
+                    let causa = 'Falta de capacitación o supervisión en el proceso';
+
+                    if (descCompleta.includes('defecto') || descCompleta.includes('visual')) {
+                        if (todasCausas.includes('máquina') || todasCausas.includes('equipo') || descCompleta.includes('equipo')) {
+                            causa = 'Desgaste o daño en componentes del equipamiento';
+                        } else if (todasCausas.includes('material') || descCompleta.includes('material')) {
+                            causa = 'Defecto en materias primas o componentes de entrada';
+                        } else if (todasCausas.includes('proceso') || descCompleta.includes('proceso')) {
+                            causa = 'Procedimiento de fabricación incorrecto o desviado';
+                        } else {
+                            causa = 'Error humano durante la ejecución del proceso';
+                        }
+                    } else if (todasCausas.includes('máquina') || todasCausas.includes('equipo')) {
+                        causa = 'Mantenimiento preventivo insuficiente del equipo';
+                    } else if (todasCausas.includes('material') || todasCausas.includes('materia prima')) {
+                        causa = 'Control de calidad deficiente en materiales de entrada';
+                    } else if (todasCausas.includes('método') || todasCausas.includes('proceso')) {
+                        causa = 'Procedimientos no estandarizados o documentación incompleta';
+                    } else if (todasCausas.includes('medición') || todasCausas.includes('medidor')) {
+                        causa = 'Calibración incorrecta de instrumentos de medición';
+                    } else if (todasCausas.includes('ambiente') || todasCausas.includes('temperatura') || todasCausas.includes('humedad')) {
+                        causa = 'Condiciones ambientales fuera de especificación';
+                    }
+                    causaRaiz = causa;
+                }
+
+                if (!causaRaiz || causaRaiz.length === 0) {
+                    throw new Error('La respuesta de la IA está vacía');
+                }
+
+                if (resultadoDiv) {
+                    resultadoDiv.innerHTML = '<strong>🎯 Causa Raíz Identificada:</strong><br>' + causaRaiz;
+                    resultadoDiv.style.display = 'block';
+                }
+
+                // Generar plan de acción
+                const promptPlan = 'Eres un experto en calidad y mejora de procesos. Basándote en la causa raíz identificada, proporciona un plan de acción PRÁCTICO y ESPECÍFICO. Estructura la respuesta así:\n1. ACCIONES INMEDIATAS (0-3 días):\n- Acción 1\n- Acción 2\n2. ACCIONES CORTO PLAZO (1-2 semanas):\n- Acción 1\n- Acción 2\n3. ACCIONES MEDIANO PLAZO (1-2 meses):\n- Acción 1\n- Acción 2\nSé específico y medible.';
+                
+                const userMessagePlan = 'Causa raíz identificada: ' + causaRaiz + '\nProblema: ' + titulo + '\n' + promptPlan;
+
+                let planAccion = '';
+
+                if (motorIA.tipo === 'ollama') {
+                    const res = await fetch('http://localhost:11434/api/generate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            model: 'tinyllama',
+                            prompt: userMessagePlan,
+                            stream: false,
+                            temperature: 0.5
+                        })
+                    });
+
+                    if (!res.ok) throw new Error('Ollama plan error: ' + res.statusText);
+                    const data = await res.json();
+                    planAccion = (data.response || '').trim();
+                } else {
+                    // Generar plan simulado
+                    planAccion = generarPlanAccionSimulado(causaRaiz, titulo);
+                }
+
+                if (planAccion && planContainer) {
+                    const contenido = document.getElementById('plan-accion-contenido');
+                    contenido.innerHTML = '<pre style="background: #f8fafc; padding: 16px; border-radius: 8px; border-left: 4px solid #7c3aed; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word;">' + planAccion + '</pre>';
+                    planContainer.style.display = 'block';
+                }
+            } catch (error) {
+                console.error(error);
+                if (resultadoDiv) {
+                    resultadoDiv.innerHTML = '<strong style="color: #dc2626;">Error:</strong> ' + error.message;
+                    resultadoDiv.style.display = 'block';
+                }
+            } finally {
+                if (boton) {
+                    boton.disabled = false;
+                    boton.textContent = '🧠 Analizar Causa';
+                }
+            }
+        }
+
+        function generarPlanAccionSimulado(causaRaiz, titulo) {
+            let plan = '📋 PLAN DE ACCIÓN - ' + titulo + '\n\n';
+            
+            plan += '1️⃣ ACCIONES INMEDIATAS (0-3 días):\n';
+            plan += '   • Detener el proceso/producción si es necesario para evitar más defectos\n';
+            plan += '   • Inspeccionar el lote afectado y separar unidades defectuosas\n';
+            plan += '   • Documentar evidencia fotográfica y datos del evento\n';
+            plan += '   • Notificar al equipo de calidad y supervisores involucrados\n\n';
+            
+            plan += '2️⃣ ACCIONES CORTO PLAZO (1-2 semanas):\n';
+            if (causaRaiz.toLowerCase().includes('mantenimiento') || causaRaiz.toLowerCase().includes('equipo')) {
+                plan += '   • Realizar mantenimiento preventivo del equipamiento afectado\n';
+                plan += '   • Calibrar instrumentos de medición\n';
+                plan += '   • Generar reporte de diagnóstico técnico\n';
+            } else if (causaRaiz.toLowerCase().includes('material')) {
+                plan += '   • Auditar a proveedores de materias primas\n';
+                plan += '   • Implementar inspección de recepción más rigurosa\n';
+                plan += '   • Revisar especificaciones de materiales\n';
+            } else if (causaRaiz.toLowerCase().includes('procedimiento') || causaRaiz.toLowerCase().includes('capacitación')) {
+                plan += '   • Revisar y actualizar procedimientos operativos\n';
+                plan += '   • Capacitar al personal en procedimientos correctos\n';
+                plan += '   • Crear checklist de verificación\n';
+            } else {
+                plan += '   • Revisar procedimientos y documentación\n';
+                plan += '   • Implementar controles adicionales\n';
+                plan += '   • Capacitar al personal relevante\n';
+            }
+            plan += '   • Reanudar producción con monitoreo intensivo\n\n';
+            
+            plan += '3️⃣ ACCIONES MEDIANO PLAZO (1-2 meses):\n';
+            plan += '   • Implementar sistema de prevención (poka-yoke) si es aplicable\n';
+            plan += '   • Establecer plan de monitoreo continuo\n';
+            plan += '   • Realizar auditoría de efectividad de correcciones\n';
+            plan += '   • Cerrar reporte de no conformidad cuando se confirme resolución\n';
+            plan += '   • Documentar lecciones aprendidas\n\n';
+            
+            plan += '👤 RESPONSABLES SUGERIDOS:\n';
+            plan += '   • Coordinador de Calidad: Supervisar ejecución del plan\n';
+            plan += '   • Jefe de Producción: Implementar acciones operativas\n';
+            plan += '   • Supervisor de Turno: Monitoreo diario post-corrección\n';
+            
+            return plan;
+        }
+
+        // Actualizar campos en tiempo real para impresión
+        document.getElementById('nc-titulo').addEventListener('input', actualizarPrintSummary);
+        document.getElementById('nc-efecto').addEventListener('input', function() { actualizarEfecto(); actualizarPrintSummary(); });
+
+        // Algunos navegadores disparan beforeprint; actualizamos allí también
+        if (window.matchMedia) {
+            window.addEventListener('beforeprint', function() { actualizarPrintSummary(); });
+        }
+
+        function inicializarPagina() {
+            inicializarEventos();
+            inicializarModeloIA();
+            inicializarAcceso();
+            actualizarEfecto();
+            actualizarPrintSummary();
+        }
+
+        if (document.readyState === 'loading') {
+            window.addEventListener('DOMContentLoaded', inicializarPagina);
+        } else {
+            inicializarPagina();
+        }
+    </script>
+</body>
+</html>

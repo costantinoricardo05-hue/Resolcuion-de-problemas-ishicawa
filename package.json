@@ -1,0 +1,12 @@
+{
+  "name": "resolucion-de-problemas-ishikawa",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "npx http-server . -p 8000",
+    "serve": "npm run start"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}

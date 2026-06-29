@@ -113,7 +113,7 @@
                 </div>
                 <div class="access-inline" style="margin-top:10px;">
                     <span style="font-size:0.95rem;color:#334155;">Link de acceso:</span>
-                    <span id="access-link-display" class="access-link">...</span>
+                        <span id="access-link-display" class="access-link">Enlace privado (oculto)</span>
                 </div>
                 <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
                     <button type="button" class="print-btn" id="copy-access-link-btn" style="background:#10b981;">Copiar enlace compartido</button>
@@ -318,7 +318,7 @@
             const linkText = document.getElementById('share-link-text');
             const keyText = document.getElementById('share-key-text');
             if (!banner || !linkText || !keyText) return;
-            linkText.textContent = generarLinkAcceso();
+            linkText.textContent = 'Enlace privado (oculto)';
             keyText.textContent = 'Clave privada configurada';
             banner.classList.remove('access-hidden');
         }
@@ -326,7 +326,7 @@
         function actualizarAccesoOverlay() {
             const linkDisplay = document.getElementById('access-link-display');
             const keyDisplay = document.getElementById('access-key-display');
-            if (linkDisplay) linkDisplay.textContent = generarLinkAcceso();
+            if (linkDisplay) linkDisplay.textContent = 'Enlace privado (oculto)';
             if (keyDisplay) keyDisplay.textContent = 'Oculta';
         }
 
@@ -354,7 +354,7 @@
             copiarTextoAlPortapapeles(generarLinkAcceso()).then(function() {
                 alert('Enlace de acceso copiado al portapapeles.');
             }).catch(function() {
-                alert('No se pudo copiar automáticamente. Copia el enlace manualmente: ' + generarLinkAcceso());
+                alert('No se pudo copiar automáticamente. Copia el enlace manualmente.');
             });
         }
 
